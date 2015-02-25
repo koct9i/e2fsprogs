@@ -1746,7 +1746,8 @@ int e2fsck_process_bad_inode(e2fsck_t ctx, ext2_ino_t dir,
 		problem = 0;
 	}
 
-	if (inode.i_faddr) {
+	if (inode.i_faddr && !EXT2_HAS_RO_COMPAT_FEATURE(fs->super,
+				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
 		if (fix_problem(ctx, PR_2_FADDR_ZERO, &pctx)) {
 			inode.i_faddr = 0;
 			inode_modified++;

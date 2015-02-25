@@ -713,7 +713,7 @@ void internal_dump_inode(FILE *out, const char *prefix,
 			 int do_dump_blocks)
 {
 	const char *i_type;
-	char frag, fsize;
+	struct ext2_super_block *sb = current_fs->super;
 	int os = current_fs->super->s_creator_os;
 	struct ext2_inode_large *large_inode;
 	int is_large_inode = 0;
@@ -741,8 +741,11 @@ void internal_dump_inode(FILE *out, const char *prefix,
 		fprintf(out, "%sGeneration: %u    Version: 0x%08x\n", prefix,
 			inode->i_generation, inode->osd1.linux1.l_i_version);
 	}
-	fprintf(out, "%sUser: %5d   Group: %5d   Size: ",
+	fprintf(out, "%sUser: %5d   Group: %5d   ",
 		prefix, inode_uid(*inode), inode_gid(*inode));
+	if (EXT2_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_PROJECT))
+		fprintf(out, "Project: %5d   ", large_inode->i_project);
+	fprintf(out, "Size: ");
 	if (LINUX_S_ISREG(inode->i_mode))
 		fprintf(out, "%llu\n", EXT2_I_SIZE(inode));
 	else
@@ -768,16 +771,22 @@ void internal_dump_inode(FILE *out, const char *prefix,
 	else
 		fprintf(out, "%sLinks: %d   Blockcount: %u\n",
 			prefix, inode->i_links_count, inode->i_blocks);
-	switch (os) {
-	    case EXT2_OS_HURD:
-		frag = inode->osd2.hurd2.h_i_frag;
-		fsize = inode->osd2.hurd2.h_i_fsize;
-		break;
-	    default:
-		frag = fsize = 0;
+
+	if (!EXT2_HAS_RO_COMPAT_FEATURE(sb, EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		char frag, fsize;
+
+		switch (os) {
+		case EXT2_OS_HURD:
+			frag = inode->osd2.hurd2.h_i_frag;
+			fsize = inode->osd2.hurd2.h_i_fsize;
+			break;
+		default:
+			frag = fsize = 0;
+		}
+		fprintf(out, "%sFragment:  Address: %d    Number: %d    Size: %d\n",
+				prefix, inode->i_faddr, frag, fsize);
 	}
-	fprintf(out, "%sFragment:  Address: %d    Number: %d    Size: %d\n",
-		prefix, inode->i_faddr, frag, fsize);
+
 	if (is_large_inode && large_inode->i_extra_isize >= 24) {
 		fprintf(out, "%s ctime: 0x%08x:%08x -- %s", prefix,
 			inode->i_ctime, large_inode->i_ctime_extra,
@@ -1256,7 +1265,14 @@ void do_modify_inode(int argc, char *argv[])
 		modify_u32(argv[0], "Translator Block",
 			    decimal_format, &inode.osd1.hurd1.h_i_translator);
 
-	modify_u32(argv[0], "Fragment address", decimal_format, &inode.i_faddr);
+	if (EXT2_HAS_RO_COMPAT_FEATURE(current_fs->super,
+				EXT4_FEATURE_RO_COMPAT_PROJECT))
+		modify_u32(argv[0], "Project ID", decimal_format,
+				&inode.i_project);
+	else
+		modify_u32(argv[0], "Fragment address", decimal_format,
+				&inode.i_faddr);
+
 	switch (os) {
 	    case EXT2_OS_HURD:
 		frag = &inode.osd2.hurd2.h_i_frag;

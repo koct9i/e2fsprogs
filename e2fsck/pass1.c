@@ -1567,7 +1567,10 @@ void e2fsck_pass1(e2fsck_t ctx)
 			frag = fsize = 0;
 		}
 
-		if (inode->i_faddr || frag || fsize ||
+		if (inode->i_faddr && !EXT2_HAS_RO_COMPAT_FEATURE(sb,
+					EXT4_FEATURE_RO_COMPAT_PROJECT))
+			mark_inode_bad(ctx, ino);
+		if (frag || fsize ||
 		    (LINUX_S_ISDIR(inode->i_mode) && inode->i_dir_acl))
 			mark_inode_bad(ctx, ino);
 		if ((fs->super->s_creator_os == EXT2_OS_LINUX) &&

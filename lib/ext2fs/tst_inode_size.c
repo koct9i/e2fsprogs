@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 	check_field(i_generation, 4);
 	check_field(i_file_acl, 4);
 	check_field(i_size_high, 4);
-	check_field(i_faddr, 4);
+	check_field(i_project, 4);
 	check_field(osd2.linux2.l_i_blocks_hi, 2);
 	check_field(osd2.linux2.l_i_file_acl_high, 2);
 	check_field(osd2.linux2.l_i_uid_high, 2);

@@ -161,7 +161,8 @@ static __u32 ok_features[3] = {
 		EXT4_FEATURE_RO_COMPAT_QUOTA |
 #endif
 		EXT4_FEATURE_RO_COMPAT_METADATA_CSUM |
-		EXT4_FEATURE_RO_COMPAT_READONLY
+		EXT4_FEATURE_RO_COMPAT_READONLY |
+		EXT4_FEATURE_RO_COMPAT_PROJECT
 };
 
 static __u32 clear_ok_features[3] = {
@@ -184,7 +185,8 @@ static __u32 clear_ok_features[3] = {
 		EXT4_FEATURE_RO_COMPAT_QUOTA |
 #endif
 		EXT4_FEATURE_RO_COMPAT_METADATA_CSUM |
-		EXT4_FEATURE_RO_COMPAT_READONLY
+		EXT4_FEATURE_RO_COMPAT_READONLY |
+		EXT4_FEATURE_RO_COMPAT_PROJECT
 };
 
 /**
@@ -1301,6 +1303,28 @@ mmp_error:
 		/* Disable both user quota and group quota by default */
 		usrquota = QOPT_DISABLE;
 		grpquota = QOPT_DISABLE;
+	}
+
+	if (FEATURE_CHANGED(E2P_FEATURE_RO_INCOMPAT,
+				EXT4_FEATURE_RO_COMPAT_PROJECT) &&
+	    (mount_flags & EXT2_MF_MOUNTED) &&
+	    !(mount_flags & EXT2_MF_READONLY)) {
+		fputs(_("The project feature may only be "
+			"changed when the filesystem is\n"
+			"unmounted or mounted read-only.\n"), stderr);
+		return 1;
+	}
+
+	if (FEATURE_ON(E2P_FEATURE_RO_INCOMPAT,
+				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		sb->s_feature_ro_compat |= EXT4_FEATURE_RO_COMPAT_PROJECT;
+	}
+
+	if (FEATURE_OFF(E2P_FEATURE_RO_INCOMPAT,
+				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		sb->s_feature_ro_compat &= ~EXT4_FEATURE_RO_COMPAT_PROJECT;
+		/* fsck will reset i_project (i_faddr) for us. */
+		request_fsck_afterwards(fs);
 	}
 
 	if (sb->s_rev_level == EXT2_GOOD_OLD_REV &&

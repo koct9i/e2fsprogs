@@ -398,7 +398,7 @@ struct ext2_inode {
 	__u32	i_generation;	/* File version (for NFS) */
 	__u32	i_file_acl;	/* File ACL */
 	__u32	i_size_high;	/* Formerly i_dir_acl, directory ACL */
-	__u32	i_faddr;	/* Fragment address */
+	__u32	i_project;	/* Formerly i_faddr, fragment address */
 	union {
 		struct {
 			__u16	l_i_blocks_hi;
@@ -446,7 +446,7 @@ struct ext2_inode_large {
 	__u32	i_generation;	/* File version (for NFS) */
 	__u32	i_file_acl;	/* File ACL */
 	__u32	i_size_high;	/* Formerly i_dir_acl, directory ACL */
-	__u32	i_faddr;	/* Fragment address */
+	__u32	i_project;	/* Formerly i_faddr, fragment address */
 	union {
 		struct {
 			__u16	l_i_blocks_hi;
@@ -480,6 +480,7 @@ struct ext2_inode_large {
 	 EXT2_GOOD_OLD_INODE_SIZE)
 
 #define i_dir_acl	i_size_high
+#define i_faddr		i_project
 
 #define i_checksum_lo	osd2.linux2.l_i_checksum_lo
 
@@ -683,7 +684,8 @@ struct ext2_super_block {
 	__u32	s_overhead_blocks;	/* overhead blocks/clusters in fs */
 	__u32	s_backup_bgs[2];	/* If sparse_super2 enabled */
 	__u8	s_encrypt_algos[4];	/* Encryption algorithms in use  */
-	__u32   s_reserved[105];        /* Padding to the end of the block */
+	__u32	s_prj_quota_inum;	/* inode number of project quota file */
+	__u32   s_reserved[104];	/* Padding to the end of the block */
 	__u32	s_checksum;		/* crc32c(superblock) */
 };
 
@@ -755,6 +757,7 @@ struct ext2_super_block {
 #define EXT4_FEATURE_RO_COMPAT_METADATA_CSUM	0x0400
 #define EXT4_FEATURE_RO_COMPAT_REPLICA		0x0800
 #define EXT4_FEATURE_RO_COMPAT_READONLY		0x1000
+#define EXT4_FEATURE_RO_COMPAT_PROJECT		0x2000 /* Project ID / Quota */
 
 
 #define EXT2_FEATURE_INCOMPAT_COMPRESSION	0x0001

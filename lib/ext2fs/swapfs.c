@@ -82,6 +82,7 @@ void ext2fs_swap_super(struct ext2_super_block * sb)
 	sb->s_usr_quota_inum = ext2fs_swab32(sb->s_usr_quota_inum);
 	sb->s_grp_quota_inum = ext2fs_swab32(sb->s_grp_quota_inum);
 	sb->s_overhead_blocks = ext2fs_swab32(sb->s_overhead_blocks);
+	sb->s_prj_quota_inum = ext2fs_swab32(sb->s_prj_quota_inum);
 	sb->s_checksum = ext2fs_swab32(sb->s_checksum);
 
 	for (i=0; i < 4; i++)
@@ -257,7 +258,7 @@ void ext2fs_swap_inode_full(ext2_filsys fs, struct ext2_inode_large *t,
 			t->i_block[i] = f->i_block[i];
 	}
 	t->i_generation = ext2fs_swab32(f->i_generation);
-	t->i_faddr = ext2fs_swab32(f->i_faddr);
+	t->i_project = ext2fs_swab32(f->i_project);
 
 	switch (fs->super->s_creator_os) {
 	case EXT2_OS_LINUX:

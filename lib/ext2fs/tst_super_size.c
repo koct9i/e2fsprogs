@@ -137,7 +137,8 @@ int main(int argc, char **argv)
 	check_field(s_overhead_blocks, 4);
 	check_field(s_backup_bgs, 8);
 	check_field(s_encrypt_algos, 4);
-	check_field(s_reserved, 105 * 4);
+	check_field(s_prj_quota_inum, 4);
+	check_field(s_reserved, 104 * 4);
 	check_field(s_checksum, 4);
 	do_field("Superblock end", 0, 0, cur_offset, 1024);
 #endif

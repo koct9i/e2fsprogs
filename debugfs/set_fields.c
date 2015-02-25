@@ -167,6 +167,7 @@ static struct field_set_info super_fields[] = {
 	{ "last_error_line", &set_sb.s_last_error_line, NULL, 4, parse_uint },
 	{ "encrypt_algos", &set_sb.s_encrypt_algos, NULL, 1, parse_uint,
 	  FLAG_ARRAY, 4 },
+	{ "prj_quota_inum", &set_sb.s_prj_quota_inum, NULL, 4, parse_uint },
 	{ 0, 0, 0, 0 }
 };
 
@@ -200,7 +201,8 @@ static struct field_set_info inode_fields[] = {
 	{ "file_acl", &set_inode.i_file_acl, 
 		&set_inode.osd2.linux2.l_i_file_acl_high, 6, parse_uint },
 	{ "dir_acl", &set_inode.i_dir_acl, NULL, 4, parse_uint, FLAG_ALIAS },
-	{ "faddr", &set_inode.i_faddr, NULL, 4, parse_uint },
+	{ "project", &set_inode.i_project, NULL, 4, parse_uint },
+	{ "faddr", &set_inode.i_faddr, NULL, 4, parse_uint, FLAG_ALIAS },
 	{ "frag", &set_inode.osd2.hurd2.h_i_frag, NULL, 1, parse_uint, FLAG_ALIAS },
 	{ "fsize", &set_inode.osd2.hurd2.h_i_fsize, NULL, 1, parse_uint },
 	{ "checksum", &set_inode.osd2.linux2.l_i_checksum_lo, 
