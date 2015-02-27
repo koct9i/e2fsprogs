@@ -1,0 +1,66 @@
+Exit status is 0
+debugfs
+debugfs: write test.img.2 file1
+Allocated inode: 12
+Exit status is 0
+resize2fs -I 21
+Reserving special inodes.
+The filesystem on test.img is now 10000 (4k) blocks long.
+
+Exit status is 0
+tune2fs -O project
+Exit status is 0
+fsck
+Pass 1: Checking inodes, blocks, and sizes
+Pass 2: Checking directory structure
+Pass 3: Checking directory connectivity
+Pass 4: Checking reference counts
+Pass 5: Checking group summary information
+test.img: 22/10016 files (0.0% non-contiguous), 584/10000 blocks
+Exit status is 0
+debugfs list_quota project
+ project     blocks    quota    limit      inodes    quota    limit
+       0    1073152        0        0           3        0        0
+Exit status is 0
+Filesystem volume name:   <none>
+Last mounted on:          <not available>
+Filesystem magic number:  0xEF53
+Filesystem revision #:    1 (dynamic)
+Filesystem features:      ext_attr resize_inode dir_index filetype sparse_super large_file quota project
+Default mount options:    (none)
+Filesystem state:         clean
+Errors behavior:          Continue
+Filesystem OS type:       Linux
+Inode count:              10016
+Block count:              10000
+Reserved block count:     500
+Free blocks:              9416
+Free inodes:              9994
+First block:              0
+Block size:               4096
+Fragment size:            4096
+Reserved GDT blocks:      2
+Blocks per group:         32768
+Fragments per group:      32768
+Inodes per group:         10016
+Inode blocks per group:   313
+Mount count:              0
+Check interval:           15552000 (6 months)
+Reserved blocks uid:      0
+Reserved blocks gid:      0
+First inode:              21
+Inode size:	          128
+Default directory hash:   half_md4
+Project quota inode:      11
+
+
+Group 0: (Blocks 0-9999)
+  Primary superblock at 0, Group descriptors at 1-1
+  Reserved GDT blocks at 2-3
+  Block bitmap at 4 (+4)
+  Inode bitmap at 5 (+5)
+  Inode table at 6-318 (+6)
+  9416 free blocks, 9994 free inodes, 2 directories
+  Free blocks: 584-9999
+  Free inodes: 23-10016
+Exit status is 0

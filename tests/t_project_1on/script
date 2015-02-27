@@ -1,0 +1,68 @@
+FSCK_OPT=-yf
+OUT=$test_name.log
+EXP=$test_dir/expect
+
+if [ "$QUOTA" != "y" ]; then
+	echo "$test_name: $test_description: skipped"
+	return 0
+fi
+
+echo "mke2fs" >> $OUT
+$MKE2FS -q -F -o Linux -b 4096 $TMPFILE 10000 > $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+dd if=/dev/zero of=$TMPFILE.2 bs=1048576 count=1 > /dev/null 2>&1
+echo "debugfs" >> $OUT
+cat <<- EOF | $DEBUGFS -w -f /dev/stdin $TMPFILE >> $OUT 2>&1
+	write $TMPFILE.2 file1
+EOF
+status=$?
+echo Exit status is $status >> $OUT
+rm -f $TMPFILE.2
+
+echo "resize2fs -I 21" >> $OUT
+$RESIZE2FS -I 21 $TMPFILE >> $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+echo "tune2fs -O project" >> $OUT
+$TUNE2FS -O project $TMPFILE >> $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+echo "fsck" >> $OUT
+$FSCK $FSCK_OPT $TMPFILE >> $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+echo "debugfs list_quota project" >> $OUT
+$DEBUGFS $TMPFILE -R "list_quota project" >> $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+$DUMPE2FS $TMPFILE >> $OUT 2>&1
+status=$?
+echo Exit status is $status >> $OUT
+
+rm -f $TMPFILE
+
+#
+# Do the verification
+#
+
+sed -f $cmd_dir/filter.sed -e "s;$TMPFILE;test.img;" -e 's/test_filesys:.*//g' < $OUT > $OUT.new
+mv $OUT.new $OUT
+
+cmp -s $OUT $EXP
+status=$?
+if [ "$status" = 0 ] ; then
+	echo "$test_name: $test_description: ok"
+	touch $test_name.ok
+else
+	echo "$test_name: $test_description: failed"
+	diff $DIFF_OPTS $EXP $OUT > $test_name.failed
+fi
+
+unset FSCK_OPT OUT EXP
+
