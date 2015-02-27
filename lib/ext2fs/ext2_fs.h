@@ -376,6 +376,11 @@ struct ext4_new_group_input {
 #define EXT4_IOC_GROUP_ADD		_IOW('f', 8,struct ext4_new_group_input)
 #define EXT4_IOC_RESIZE_FS		_IOW('f', 16, __u64)
 
+#ifndef FS_IOC_GETPROJECT
+#define FS_IOC_GETPROJECT		_IOR('f', 20, unsigned)
+#define FS_IOC_SETPROJECT		_IOW('f', 21, unsigned)
+#endif
+
 /*
  * Structure of an inode on the disk
  */

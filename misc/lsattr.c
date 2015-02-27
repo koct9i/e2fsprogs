@@ -60,6 +60,7 @@ static unsigned pf_options;
 static int recursive;
 static int verbose;
 static int generation_opt;
+static int project_opt;
 
 #ifdef _LFS64_LARGEFILE
 #define LSTAT		lstat64
@@ -71,7 +72,7 @@ static int generation_opt;
 
 static void usage(void)
 {
-	fprintf(stderr, _("Usage: %s [-RVadlv] [files...]\n"), program_name);
+	fprintf(stderr, _("Usage: %s [-RVadlvp] [files...]\n"), program_name);
 	exit(1);
 }
 
@@ -93,6 +94,17 @@ static int list_attributes (const char * name)
 			return -1;
 		}
 		printf ("%5lu ", generation);
+	}
+	if (project_opt) {
+		unsigned project;
+
+		if (fgetproject(name, &project) == -1) {
+			com_err (program_name, errno,
+				 _("While reading project on %s"),
+				 name);
+			return -1;
+		}
+		printf ("%5u ", project);
 	}
 	if (pf_options & PFOPT_LONG) {
 		printf("%-28s ", name);
@@ -171,7 +183,7 @@ int main (int argc, char ** argv)
 #endif
 	if (argc && *argv)
 		program_name = *argv;
-	while ((c = getopt (argc, argv, "RVadlv")) != EOF)
+	while ((c = getopt (argc, argv, "RVadlvp")) != EOF)
 		switch (c)
 		{
 			case 'R':
@@ -191,6 +203,9 @@ int main (int argc, char ** argv)
 				break;
 			case 'v':
 				generation_opt = 1;
+				break;
+			case 'p':
+				project_opt = 1;
 				break;
 			default:
 				usage();
