@@ -88,5 +88,16 @@ void e2fsck_hide_quota(e2fsck_t ctx)
 		sb->s_grp_quota_inum = EXT4_GRP_QUOTA_INO;
 	}
 
+	pctx.ino = sb->s_prj_quota_inum;
+	if ((sb->s_feature_ro_compat & EXT4_FEATURE_RO_COMPAT_PROJECT) &&
+	    sb->s_prj_quota_inum &&
+	    (sb->s_prj_quota_inum != EXT4_PRJ_QUOTA_INO) &&
+	    (sb->s_first_ino > EXT4_PRJ_QUOTA_INO) &&
+	    fix_problem(ctx, PR_0_HIDE_QUOTA, &pctx)) {
+		move_quota_inode(fs, sb->s_prj_quota_inum, EXT4_PRJ_QUOTA_INO,
+				 PRJQUOTA);
+		sb->s_prj_quota_inum = EXT4_PRJ_QUOTA_INO;
+	}
+
 	return;
 }

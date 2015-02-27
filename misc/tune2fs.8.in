@@ -580,6 +580,12 @@ keep a high watermark for the unused inodes in a filesystem, to reduce
 time.  This first e2fsck run after enabling this feature will take the
 full time, but subsequent e2fsck runs will take only a fraction of the
 original time, depending on how full the file system is.
+.TP
+.B project
+Add project ID to inode.
+@QUOTA_MAN_COMMENT@And project quota if feature
+@QUOTA_MAN_COMMENT@.B quota
+@QUOTA_MAN_COMMENT@is enabled.
 .RE
 .IP
 After setting or clearing 
@@ -622,6 +628,9 @@ Sets/clears user quota inode in the superblock.
 .TP
 .BR [^]grpquota
 Sets/clears group quota inode in the superblock.
+.TP
+.BR [^]prjquota
+Sets/clears project quota inode in the superblock.
 .RE
 .TP
 .BI \-T " time-last-checked"

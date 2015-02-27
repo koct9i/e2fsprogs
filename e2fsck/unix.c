@@ -1636,14 +1636,20 @@ print_unsupp_features:
 		journal_size = -1;
 
 	if (sb->s_feature_ro_compat & EXT4_FEATURE_RO_COMPAT_QUOTA) {
-		/* Quotas were enabled. Do quota accounting during fsck. */
-		if ((sb->s_usr_quota_inum && sb->s_grp_quota_inum) ||
-		    (!sb->s_usr_quota_inum && !sb->s_grp_quota_inum))
-			qtype = -1;
-		else
-			qtype = sb->s_usr_quota_inum ? USRQUOTA : GRPQUOTA;
+		/*
+		 * Quotas were enabled. Do quota accounting during fsck.
+		 * If no quotas in-use then initialize all supported types.
+		 */
+		qtype = -2;
+		if (sb->s_usr_quota_inum)
+			qtype = USRQUOTA;
+		if (sb->s_grp_quota_inum)
+			qtype = (qtype == -2) ? GRPQUOTA : -1;
+		if (sb->s_prj_quota_inum && EXT2_HAS_RO_COMPAT_FEATURE(sb,
+						EXT4_FEATURE_RO_COMPAT_PROJECT))
+			qtype = (qtype == -2) ? PRJQUOTA : -1;
 
-		quota_init_context(&ctx->qctx, ctx->fs, qtype);
+		quota_init_context(&ctx->qctx, ctx->fs, qtype < 0 ? -1 : qtype);
 	}
 
 	run_result = e2fsck_run(ctx);
@@ -1682,7 +1688,8 @@ no_journal:
 	if (ctx->qctx) {
 		int i, needs_writeout;
 		for (i = 0; i < MAXQUOTAS; i++) {
-			if (qtype != -1 && qtype != i)
+			if ((qtype == -1 && !quota_get_sb_inum(fs, i)) ||
+			    (qtype >= 0 && qtype != i))
 				continue;
 			needs_writeout = 0;
 			pctx.num = i;

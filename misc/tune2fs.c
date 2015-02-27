@@ -95,7 +95,7 @@ static int stride_set, stripe_width_set;
 static char *extended_cmd;
 static unsigned long new_inode_size;
 static char *ext_mount_opts;
-static int usrquota, grpquota;
+static int usrquota, grpquota, prjquota;
 static int rewrite_checksums;
 static int feature_64bit;
 static int fsck_requested;
@@ -1303,6 +1303,7 @@ mmp_error:
 		/* Disable both user quota and group quota by default */
 		usrquota = QOPT_DISABLE;
 		grpquota = QOPT_DISABLE;
+		prjquota = QOPT_DISABLE;
 	}
 
 	if (FEATURE_CHANGED(E2P_FEATURE_RO_INCOMPAT,
@@ -1317,11 +1318,19 @@ mmp_error:
 
 	if (FEATURE_ON(E2P_FEATURE_RO_INCOMPAT,
 				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		if (!Q_flag) {
+			Q_flag = 1;
+			prjquota = QOPT_ENABLE;
+		}
 		sb->s_feature_ro_compat |= EXT4_FEATURE_RO_COMPAT_PROJECT;
 	}
 
 	if (FEATURE_OFF(E2P_FEATURE_RO_INCOMPAT,
 				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		if (!Q_flag) {
+			Q_flag = 1;
+			prjquota = QOPT_DISABLE;
+		}
 		sb->s_feature_ro_compat &= ~EXT4_FEATURE_RO_COMPAT_PROJECT;
 		/* fsck will reset i_project (i_faddr) for us. */
 		request_fsck_afterwards(fs);
@@ -1441,13 +1450,15 @@ static void handle_quota_options(ext2_filsys fs)
 	quota_ctx_t qctx;
 	ext2_ino_t qf_ino;
 
-	if (!usrquota && !grpquota)
+	if (!usrquota && !grpquota && !prjquota)
 		/* Nothing to do. */
 		return;
 
 	quota_init_context(&qctx, fs, -1);
 
-	if (usrquota == QOPT_ENABLE || grpquota == QOPT_ENABLE)
+	if (usrquota == QOPT_ENABLE ||
+	    grpquota == QOPT_ENABLE ||
+	    prjquota == QOPT_ENABLE)
 		quota_compute_usage(qctx);
 
 	if (usrquota == QOPT_ENABLE && !fs->super->s_usr_quota_inum) {
@@ -1468,13 +1479,25 @@ static void handle_quota_options(ext2_filsys fs)
 		quota_remove_inode(fs, GRPQUOTA);
 	}
 
+	if (prjquota == QOPT_ENABLE && !fs->super->s_prj_quota_inum) {
+		if ((qf_ino = quota_file_exists(fs, PRJQUOTA,
+						QFMT_VFS_V1)) > 0)
+			quota_update_limits(qctx, qf_ino, PRJQUOTA);
+		quota_write_inode(qctx, PRJQUOTA);
+	} else if (prjquota == QOPT_DISABLE) {
+		quota_remove_inode(fs, PRJQUOTA);
+	}
+
 	quota_release_context(&qctx);
 
-	if ((usrquota == QOPT_ENABLE) || (grpquota == QOPT_ENABLE)) {
+	if ((usrquota == QOPT_ENABLE) ||
+	    (grpquota == QOPT_ENABLE) ||
+	    (prjquota == QOPT_ENABLE)) {
 		fs->super->s_feature_ro_compat |= EXT4_FEATURE_RO_COMPAT_QUOTA;
 		ext2fs_mark_super_dirty(fs);
 	} else if (!fs->super->s_usr_quota_inum &&
-		   !fs->super->s_grp_quota_inum) {
+		   !fs->super->s_grp_quota_inum &&
+		   !fs->super->s_prj_quota_inum) {
 		fs->super->s_feature_ro_compat &= ~EXT4_FEATURE_RO_COMPAT_QUOTA;
 		ext2fs_mark_super_dirty(fs);
 	}
@@ -1512,12 +1535,17 @@ static void parse_quota_opts(const char *opts)
 			grpquota = QOPT_ENABLE;
 		} else if (strcmp(token, "^grpquota") == 0) {
 			grpquota = QOPT_DISABLE;
+		} else if (strcmp(token, "prjquota") == 0) {
+			prjquota = QOPT_ENABLE;
+		} else if (strcmp(token, "^prjquota") == 0) {
+			prjquota = QOPT_DISABLE;
 		} else {
 			fputs(_("\nBad quota options specified.\n\n"
 				"Following valid quota options are available "
 				"(pass by separating with comma):\n"
 				"\t[^]usrquota\n"
 				"\t[^]grpquota\n"
+				"\t[^]prjquota\n"
 				"\n\n"), stderr);
 			free(buf);
 			exit(1);
@@ -2942,6 +2970,17 @@ retry_open:
 		if (mount_flags & EXT2_MF_MOUNTED) {
 			fputs(_("The quota feature may only be changed when "
 				"the filesystem is unmounted.\n"), stderr);
+			rc = 1;
+			goto closefs;
+		}
+		if (prjquota == QOPT_ENABLE &&
+		    EXT4_PRJ_QUOTA_INO >= EXT2_FIRST_INO(sb)) {
+			/*
+			 * For now it supports only hidden project quota,
+			 * theoretically we can create 'aquota.project' here.
+			 */
+			fputs(_("Special inode for project quota isn't reserved."
+				"Please reserve it by resize2fs -I 21"), stderr);
 			rc = 1;
 			goto closefs;
 		}

@@ -19,7 +19,7 @@
 #include "common.h"
 #include "quotaio.h"
 
-static const char * const extensions[MAXQUOTAS] = {"user", "group"};
+static const char * const extensions[MAXQUOTAS] = {"user", "group", "project"};
 static const char * const basenames[] = {
 	"",		/* undefined */
 	"quota",	/* QFMT_VFS_OLD */
@@ -118,7 +118,8 @@ errcode_t quota_inode_truncate(ext2_filsys fs, ext2_ino_t ino)
 	if ((err = ext2fs_read_inode(fs, ino, &inode)))
 		return err;
 
-	if ((ino == EXT4_USR_QUOTA_INO) || (ino == EXT4_GRP_QUOTA_INO)) {
+	if ((ino == EXT4_USR_QUOTA_INO) || (ino == EXT4_GRP_QUOTA_INO) ||
+	    (ino == EXT4_PRJ_QUOTA_INO)) {
 		inode.i_dtime = fs->now ? fs->now : time(0);
 		if (!ext2fs_inode_has_valid_blocks2(fs, &inode))
 			return 0;
@@ -215,12 +216,8 @@ errcode_t quota_file_open(quota_ctx_t qctx, struct quota_handle *h,
 	if (err)
 		return err;
 
-	if (qf_ino == 0) {
-		if (type == USRQUOTA)
-			qf_ino = fs->super->s_usr_quota_inum;
-		else
-			qf_ino = fs->super->s_grp_quota_inum;
-	}
+	if (qf_ino == 0)
+		qf_ino = quota_get_sb_inum(fs, type);
 
 	log_debug("Opening quota ino=%lu, type=%d", qf_ino, type);
 	err = ext2fs_file_open(fs, qf_ino, flags, &e2_file);
@@ -318,18 +315,26 @@ errcode_t quota_file_create(struct quota_handle *h, ext2_filsys fs, int type, in
 {
 	ext2_file_t e2_file;
 	int err;
-	unsigned long qf_inum;
+	ext2_ino_t qf_inum;
 
 	if (fmt == -1)
 		fmt = QFMT_VFS_V1;
 
 	h->qh_qf.fs = fs;
+
 	if (type == USRQUOTA)
 		qf_inum = EXT4_USR_QUOTA_INO;
 	else if (type == GRPQUOTA)
 		qf_inum = EXT4_GRP_QUOTA_INO;
+	else if (type == PRJQUOTA)
+		qf_inum = EXT4_PRJ_QUOTA_INO;
 	else
 		return -1;
+
+	if (qf_inum >= EXT2_FIRST_INO(fs->super)) {
+		log_err("quota inode is not special");
+		return EXT2_ET_BAD_INODE_NUM;
+	}
 
 	err = ext2fs_read_bitmaps(fs);
 	if (err)

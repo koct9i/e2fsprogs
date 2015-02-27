@@ -253,6 +253,13 @@ the file system using
 and it also speeds up the time required for
 .BR mke2fs (8)
 to create the file system.
+.TP
+.B project
+.br
+This filesystem feature adds third identificator to inode - "project ID".
+Projects provides mechanism for aggregating subtrees or individual files
+scattered across filesystem and enforcing disk quotas for them regardless
+of users and groups who own them.
 .RE
 .SH MOUNT OPTIONS
 This section describes mount options which are specific to ext2, ext3,

@@ -25,7 +25,7 @@ extern char *optarg;
 
 #include "debugfs.h"
 
-const char *quota_type[] = { "user", "group", NULL };
+const char *quota_type[] = { "user", "group", "project", NULL };
 
 static int load_quota_ctx(char *progname)
 {
@@ -121,7 +121,8 @@ void do_list_quota(int argc, char *argv[])
 		return;
 
 	printf("%8s   %8s %8s %8s    %8s %8s %8s\n",
-	       (type == 0) ? "user id" : "group id",
+	       (type == USRQUOTA) ? "user id" :
+	       (type == GRPQUOTA) ? "group id" : "project",
 	       "blocks", "quota", "limit", "inodes", "quota", "limit");
 	qh = current_qctx->quota_file[type];
 	retval = qh->qh_ops->scan_dquots(qh, list_quota_callback, NULL);
@@ -155,7 +156,8 @@ void do_get_quota(int argc, char *argv[])
 		return;
 
 	printf("%8s   %8s %8s %8s    %8s %8s %8s\n",
-	       (type == 0) ? "user id" : "group id",
+	       (type == USRQUOTA) ? "user id" :
+	       (type == GRPQUOTA) ? "group id" : "project",
 	       "blocks", "quota", "limit", "inodes", "quota", "limit");
 
 	qh = current_qctx->quota_file[type];

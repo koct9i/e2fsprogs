@@ -56,6 +56,11 @@
 /* First non-reserved inode for old ext2 filesystems */
 #define EXT2_GOOD_OLD_FIRST_INO	11
 
+#define EXT4_PRJ_QUOTA_INO	11	/* Project quota inode */
+
+/* Default first non-reserved inode for new filesystems */
+#define EXT4_DEFAULT_FIRST_INO	21
+
 /*
  * The second extended file system magic number
  */

@@ -44,9 +44,10 @@
 
 typedef int64_t qsize_t;	/* Type in which we store size limitations */
 
-#define MAXQUOTAS 2
+#define MAXQUOTAS 3
 #define USRQUOTA 0
 #define GRPQUOTA 1
+#define PRJQUOTA 2
 
 typedef struct quota_ctx *quota_ctx_t;
 
@@ -61,7 +62,8 @@ struct quota_ctx {
  */
 #define INITQMAGICS {\
 	0xd9c01f11,	/* USRQUOTA */\
-	0xd9c01927	/* GRPQUOTA */\
+	0xd9c01927,	/* GRPQUOTA */\
+	0xd9c03f14,	/* PRJQUOTA */\
 }
 
 /* Size of blocks in which are counted size limits in generic utility parts */
@@ -216,6 +218,7 @@ void quota_release_context(quota_ctx_t *qctx);
 
 errcode_t quota_remove_inode(ext2_filsys fs, int qtype);
 int quota_file_exists(ext2_filsys fs, int qtype, int fmt);
+ext2_ino_t quota_get_sb_inum(ext2_filsys fs, int qtype);
 void quota_set_sb_inum(ext2_filsys fs, ext2_ino_t ino, int qtype);
 errcode_t quota_compare_and_update(quota_ctx_t qctx, int qtype,
 				   int *usage_inconsistent);

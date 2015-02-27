@@ -379,11 +379,14 @@ command-line option to
 .BR resize2fs (8).
 @QUOTA_MAN_COMMENT@.TP
 @QUOTA_MAN_COMMENT@.BI quotatype
-@QUOTA_MAN_COMMENT@Specify which quota type ('usr' or 'grp') is to be
+@QUOTA_MAN_COMMENT@Specify which quota type ('usr', 'grp' or 'prj') is to be
 @QUOTA_MAN_COMMENT@initialized. This option has effect only if the
 @QUOTA_MAN_COMMENT@.B quota
 @QUOTA_MAN_COMMENT@feature is set. Without this extended option, the default
 @QUOTA_MAN_COMMENT@behavior is to initialize both user and group quotas.
+@QUOTA_MAN_COMMENT@If feature
+@QUOTA_MAN_COMMENT@.B project
+@QUOTA_MAN_COMMENT@is set then project quota is also initialized by default.
 .RE
 .TP
 .BI \-f " fragment-size"

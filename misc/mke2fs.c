@@ -1029,9 +1029,11 @@ static void parse_extended_opts(struct ext2_super_block *param,
 				continue;
 			}
 			if (!strncmp(arg, "usr", 3)) {
-				quotatype = 0;
+				quotatype = USRQUOTA;
 			} else if (!strncmp(arg, "grp", 3)) {
-				quotatype = 1;
+				quotatype = GRPQUOTA;
+			} else if (!strncmp(arg, "prj", 3)) {
+				quotatype = PRJQUOTA;
 			} else {
 				fprintf(stderr,
 					_("Invalid quotatype parameter: %s\n"),
@@ -2448,6 +2450,23 @@ profile_error:
 		if (num_backups >= 2)
 			fs_param.s_backup_bgs[1] = ~0;
 	}
+
+#ifdef CONFIG_QUOTA
+	if (EXT2_HAS_RO_COMPAT_FEATURE(&fs_param,
+				EXT4_FEATURE_RO_COMPAT_PROJECT)) {
+		/* Feature "project" automacally enables project quota */
+		if (!EXT2_HAS_RO_COMPAT_FEATURE(&fs_param,
+					EXT4_FEATURE_RO_COMPAT_QUOTA)) {
+			fs_param.s_feature_ro_compat |=
+					EXT4_FEATURE_RO_COMPAT_QUOTA;
+			if (quotatype == -1)
+				quotatype = PRJQUOTA;
+		}
+		/* Reserve special inode for project quota */
+		if (fs_param.s_first_ino <= EXT4_PRJ_QUOTA_INO)
+			fs_param.s_first_ino = EXT4_DEFAULT_FIRST_INO;
+	}
+#endif
 
 	free(fs_type);
 	free(usage_types);

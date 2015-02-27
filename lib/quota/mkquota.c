@@ -84,6 +84,18 @@ int quota_file_exists(ext2_filsys fs, int qtype, int fmt)
 	return ino;
 }
 
+ext2_ino_t quota_get_sb_inum(ext2_filsys fs, int qtype)
+{
+	switch (qtype) {
+	case USRQUOTA:
+		return fs->super->s_usr_quota_inum;
+	case GRPQUOTA:
+		return fs->super->s_grp_quota_inum;
+	case PRJQUOTA:
+		return fs->super->s_prj_quota_inum;
+	}
+}
+
 /*
  * Set the value for reserved quota inode number field in superblock.
  */
@@ -91,8 +103,17 @@ void quota_set_sb_inum(ext2_filsys fs, ext2_ino_t ino, int qtype)
 {
 	ext2_ino_t *inump;
 
-	inump = (qtype == USRQUOTA) ? &fs->super->s_usr_quota_inum :
-		&fs->super->s_grp_quota_inum;
+	switch (qtype) {
+	case USRQUOTA:
+		inump = &fs->super->s_usr_quota_inum;
+		break;
+	case GRPQUOTA:
+		inump = &fs->super->s_grp_quota_inum;
+		break;
+	case PRJQUOTA:
+		inump = &fs->super->s_prj_quota_inum;
+		break;
+	}
 
 	log_debug("setting quota ino in superblock: ino=%u, type=%d", ino,
 		 qtype);
@@ -110,9 +131,10 @@ errcode_t quota_remove_inode(ext2_filsys fs, int qtype)
 		log_err("Couldn't read bitmaps: %s", error_message(retval));
 		return retval;
 	}
-	qf_ino = (qtype == USRQUOTA) ? fs->super->s_usr_quota_inum :
-		fs->super->s_grp_quota_inum;
+
+	qf_ino = quota_get_sb_inum(fs, qtype);
 	quota_set_sb_inum(fs, 0, qtype);
+
 	/* Truncate the inode only if its a reserved one. */
 	if (qf_ino < EXT2_FIRST_INODE(fs->super))
 		quota_inode_truncate(fs, qf_ino);
@@ -232,9 +254,14 @@ static int dict_uint_cmp(const void *a, const void *b)
 
 static inline qid_t get_qid(struct ext2_inode *inode, int qtype)
 {
-	if (qtype == USRQUOTA)
+	switch (qtype) {
+	case USRQUOTA:
 		return inode_uid(*inode);
-	return inode_gid(*inode);
+	case GRPQUOTA:
+		return inode_gid(*inode);
+	case PRJQUOTA:
+		return inode->i_project;
+	}
 }
 
 static void quota_dnode_free(dnode_t *node,
@@ -266,6 +293,9 @@ errcode_t quota_init_context(quota_ctx_t *qctx, ext2_filsys fs, int qtype)
 	for (i = 0; i < MAXQUOTAS; i++) {
 		ctx->quota_file[i] = NULL;
 		if ((qtype != -1) && (i != qtype))
+			continue;
+		if (i == PRJQUOTA && !EXT2_HAS_RO_COMPAT_FEATURE(fs->super,
+					EXT4_FEATURE_RO_COMPAT_PROJECT))
 			continue;
 		err = ext2fs_get_mem(sizeof(dict_t), &dict);
 		if (err) {
