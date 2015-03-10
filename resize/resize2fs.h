@@ -85,6 +85,8 @@ typedef struct ext2_sim_progress *ext2_sim_progmeter;
 #define RESIZE_ENABLE_64BIT		0x0400
 #define RESIZE_DISABLE_64BIT		0x0800
 
+#define RESIZE_SPECIAL_INODES		0x1000
+
 /*
  * This structure is used for keeping track of how much resources have
  * been used for a particular resize2fs pass.
@@ -130,6 +132,7 @@ struct ext2_resize_struct {
 	void		*prog_data;
 
 	blk64_t		new_size;
+	ext2_ino_t	first_ino;
 };
 
 /*

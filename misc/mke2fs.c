@@ -1005,6 +1005,23 @@ static void parse_extended_opts(struct ext2_super_block *param,
 			discard = 1;
 		} else if (!strcmp(token, "nodiscard")) {
 			discard = 0;
+		} else if (!strcmp(token, "first_inode")) {
+			if (!arg) {
+				r_usage++;
+				badopt = token;
+				continue;
+			}
+			param->s_first_ino = strtoul(arg, &p, 0);
+			if (*p ||
+			    param->s_first_ino < EXT2_GOOD_OLD_FIRST_INO ||
+			    (param->s_rev_level == EXT2_GOOD_OLD_REV &&
+			     param->s_first_ino != EXT2_GOOD_OLD_FIRST_INO)) {
+				fprintf(stderr,
+					_("Invalid first_ino parameter: %s\n"),
+					arg);
+				r_usage++;
+				continue;
+			}
 		} else if (!strcmp(token, "quotatype")) {
 			if (!arg) {
 				r_usage++;
@@ -1047,6 +1064,7 @@ static void parse_extended_opts(struct ext2_super_block *param,
 			"\ttest_fs\n"
 			"\tdiscard\n"
 			"\tnodiscard\n"
+			"\tfirst_inode=<inode number>\n"
 			"\tquotatype=<usr OR grp>\n\n"),
 			badopt ? badopt : "");
 		free(buf);

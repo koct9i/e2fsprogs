@@ -18,6 +18,10 @@ resize2fs \- ext2/ext3/ext4 file system resizer
 .B \-S
 .I RAID-stride
 ]
+[
+.B \-I
+.I first-inode
+]
 .I device
 [
 .I size
@@ -100,6 +104,10 @@ to resize the filesystem concurrent with changing the 64bit status.
 .B \-b
 Turns on the 64bit feature, resizes the group descriptors as necessary, and
 moves other metadata out of the way.
+.TP
+.B \-I \fI <first-inode>
+This changes first normal inode and relocates inuse inodes into vacant slots.
+Inodes below that are reserved for internal use. Reducing isn't supported.
 .TP
 .B \-d \fIdebug-flags
 Turns on various resize2fs debugging features, if they have been compiled

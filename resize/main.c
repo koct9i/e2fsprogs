@@ -41,8 +41,8 @@ static char *device_name, *io_options;
 
 static void usage (char *prog)
 {
-	fprintf (stderr, _("Usage: %s [-d debug_flags] [-f] [-F] [-M] [-P] "
-			   "[-p] device [-b|-s|new_size]\n\n"), prog);
+	fprintf (stderr, _("Usage: %s [-d debug_flags] [-f] [-F] [-M] [-P]"
+			   "[-p] [-I ino] device [-b|-s|new_size]\n\n"), prog);
 
 	exit (1);
 }
@@ -213,7 +213,7 @@ int main (int argc, char ** argv)
 		exit(1);
 	}
 
-	while ((c = getopt(argc, argv, "d:fFhMPpS:bs")) != EOF) {
+	while ((c = getopt(argc, argv, "d:fFhMPpS:bsI:")) != EOF) {
 		switch (c) {
 		case 'h':
 			usage(program_name);
@@ -244,6 +244,10 @@ int main (int argc, char ** argv)
 			break;
 		case 's':
 			flags |= RESIZE_DISABLE_64BIT;
+			break;
+		case 'I':
+			flags |= RESIZE_SPECIAL_INODES;
+			rfs->first_ino = atoi(optarg);
 			break;
 		default:
 			usage(program_name);
@@ -430,7 +434,8 @@ int main (int argc, char ** argv)
 			new_size &= ~((sys_page_size / blocksize)-1);
 	}
 	/* If changing 64bit, don't change the filesystem size. */
-	if (flags & (RESIZE_DISABLE_64BIT | RESIZE_ENABLE_64BIT)) {
+	if (flags & (RESIZE_DISABLE_64BIT | RESIZE_ENABLE_64BIT |
+		     RESIZE_SPECIAL_INODES)) {
 		new_size = ext2fs_blocks_count(fs->super);
 	}
 	if (!EXT2_HAS_INCOMPAT_FEATURE(fs->super,
@@ -507,6 +512,28 @@ int main (int argc, char ** argv)
 				"feature.\n"));
 			exit(1);
 		}
+	} else if (flags & RESIZE_SPECIAL_INODES) {
+		if (rfs->first_ino > fs->super->s_inodes_count) {
+			fprintf(stderr, _("First inode too big\n"));
+			exit(1);
+		}
+		if (rfs->first_ino < EXT2_FIRST_INO(fs->super)) {
+			fprintf(stderr, _("The filesystem has %d special inodes."
+					  "Reducing isn't supported.\n\n"),
+					EXT2_FIRST_INO(fs->super));
+			exit(1);
+		}
+		if (rfs->first_ino == EXT2_FIRST_INO(fs->super)) {
+			fprintf(stderr, _("The filesystem already has %d "
+					  "special inodes. Nothing to do!\n\n"),
+					EXT2_FIRST_INO(fs->super));
+			exit(0);
+		}
+		if (mount_flags & EXT2_MF_MOUNTED) {
+			fprintf(stderr, _("Cannot change count of special "
+				"inodes while the filesystem is mounted.\n"));
+			exit(1);
+		}
 	} else if (new_size == ext2fs_blocks_count(fs->super)) {
 		fprintf(stderr, _("The filesystem is already %llu (%dk) "
 			"blocks long.  Nothing to do!\n\n"), new_size,
@@ -532,6 +559,8 @@ int main (int argc, char ** argv)
 			printf(_("Converting the filesystem to 64-bit.\n"));
 		else if (flags & RESIZE_DISABLE_64BIT)
 			printf(_("Converting the filesystem to 32-bit.\n"));
+		else if (flags & RESIZE_SPECIAL_INODES)
+			printf(_("Reserving special inodes.\n"));
 		else
 			printf(_("Resizing the filesystem on "
 				 "%s to %llu (%dk) blocks.\n"),

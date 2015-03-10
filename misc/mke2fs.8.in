@@ -369,6 +369,14 @@ as default.
 .TP
 .BI nodiscard
 Do not attempt to discard blocks at mkfs time.
+.TP
+.BI first_inode= inode-number
+This defines first normal inode, lower inodes are reserved for internal use.
+For filesystem revision 0 this valus is fixed to 11, that is default and
+minimal value for revision 1. This could be changed at a later time with the
+.B \-I
+command-line option to
+.BR resize2fs (8).
 @QUOTA_MAN_COMMENT@.TP
 @QUOTA_MAN_COMMENT@.BI quotatype
 @QUOTA_MAN_COMMENT@Specify which quota type ('usr' or 'grp') is to be

@@ -48,6 +48,7 @@ static errcode_t block_mover(ext2_resize_t rfs);
 static errcode_t inode_scan_and_fix(ext2_resize_t rfs);
 static errcode_t inode_ref_fix(ext2_resize_t rfs);
 static errcode_t move_itables(ext2_resize_t rfs);
+static errcode_t zero_new_special_inodes(ext2_resize_t rfs);
 static errcode_t fix_resize_inode(ext2_filsys fs);
 static errcode_t ext2fs_calculate_summary_stats(ext2_filsys fs);
 static errcode_t fix_sb_journal_backup(ext2_filsys fs);
@@ -112,6 +113,11 @@ errcode_t resize_fs(ext2_filsys fs, ext2_resize_t rfs)
 	if (retval)
 		goto errout;
 
+	if (flags & RESIZE_SPECIAL_INODES) {
+		ext2fs_update_dynamic_rev(rfs->new_fs);
+		EXT2_SB(rfs->new_fs->super)->s_first_ino = rfs->first_ino;
+	}
+
 	init_resource_track(&rtrack, "resize_group_descriptors", fs->io);
 	retval = resize_group_descriptors(rfs);
 	if (retval)
@@ -173,6 +179,12 @@ errcode_t resize_fs(ext2_filsys fs, ext2_resize_t rfs)
 
 	init_resource_track(&rtrack, "inode_ref_fix", fs->io);
 	retval = inode_ref_fix(rfs);
+	if (retval)
+		goto errout;
+	print_resource_track(rfs, &rtrack, fs->io);
+
+	init_resource_track(&rtrack, "zero_new_special_inodes", fs->io);
+	retval = zero_new_special_inodes(rfs);
 	if (retval)
 		goto errout;
 	print_resource_track(rfs, &rtrack, fs->io);
@@ -1963,7 +1975,8 @@ static errcode_t inode_scan_and_fix(ext2_resize_t rfs)
 
 	if ((rfs->old_fs->group_desc_count <=
 	     rfs->new_fs->group_desc_count) &&
-	    !rfs->bmap)
+	    !rfs->bmap &&
+	    !(rfs->flags & RESIZE_SPECIAL_INODES))
 		return 0;
 
 	set_com_err_hook(quiet_com_err_proc);
@@ -2018,7 +2031,11 @@ static errcode_t inode_scan_and_fix(ext2_resize_t rfs)
 			goto errout;
 
 		new_inode = ino;
-		if (ino <= start_to_move)
+		if (ino >= EXT2_FIRST_INO(rfs->old_fs->super) &&
+		    ino <  EXT2_FIRST_INO(rfs->new_fs->super)) {
+			ext2fs_inode_alloc_stats2(rfs->new_fs, ino, -1,
+						  pb.is_dir);
+		} else if (ino <= start_to_move)
 			goto remap_blocks; /* Don't need to move inode. */
 
 		/*
@@ -2549,6 +2566,37 @@ static errcode_t reserve_sparse_super2_last_group(ext2_resize_t rfs,
 		ext2fs_mark_block_bitmap2(rfs->reserve_blocks, blk);
 	}
 	return 0;
+}
+
+/*
+ * Clear new special inodes
+ */
+static errcode_t zero_new_special_inodes(ext2_resize_t rfs)
+{
+	ext2_filsys		fs = rfs->new_fs;
+	int			inode_size;
+	struct ext2_inode	*inode;
+	errcode_t		retval;
+	ext2_ino_t		ino;
+
+	if (!(rfs->flags & RESIZE_SPECIAL_INODES))
+		return 0;
+
+	inode_size = EXT2_INODE_SIZE(fs->super);
+	retval = ext2fs_get_memzero(inode_size, &inode);
+	if (retval)
+		return retval;
+
+	for (ino = EXT2_FIRST_INO(rfs->old_fs->super);
+	     ino < EXT2_FIRST_INO(fs->super); ino++) {
+		/* All special inodes are marked as inuse */
+		ext2fs_inode_alloc_stats2(fs, ino, +1, 0);
+		retval = ext2fs_write_inode_full(fs, ino, inode, inode_size);
+		if (retval)
+			break;
+	}
+	ext2fs_free_mem(&inode);
+	return retval;
 }
 
 /*
