@@ -128,6 +128,8 @@ struct ext2_resize_struct {
 				    unsigned long cur,
 				    unsigned long max);
 	void		*prog_data;
+
+	blk64_t		new_size;
 };
 
 /*
@@ -141,10 +143,7 @@ struct ext2_resize_struct {
 
 
 /* prototypes */
-extern errcode_t resize_fs(ext2_filsys fs, blk64_t *new_size, int flags,
-			   errcode_t	(*progress)(ext2_resize_t rfs,
-					    int pass, unsigned long cur,
-					    unsigned long max));
+extern errcode_t resize_fs(ext2_filsys fs, ext2_resize_t rfs);
 
 extern errcode_t adjust_fs_info(ext2_filsys fs, ext2_filsys old_fs,
 				ext2fs_block_bitmap reserve_blocks,

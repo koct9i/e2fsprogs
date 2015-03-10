@@ -187,6 +187,7 @@ int main (int argc, char ** argv)
 	long		sysval;
 	int		len, mount_flags;
 	char		*mtpt;
+	ext2_resize_t	rfs;
 
 #ifdef ENABLE_NLS
 	setlocale(LC_MESSAGES, "");
@@ -202,6 +203,15 @@ int main (int argc, char ** argv)
 		 E2FSPROGS_VERSION, E2FSPROGS_DATE);
 	if (argc && *argv)
 		program_name = *argv;
+
+	/*
+	 * Create the data structure
+	 */
+	retval = ext2fs_get_memzero(sizeof(struct ext2_resize_struct), &rfs);
+	if (retval) {
+		com_err("resize2fs", retval, "can't allocate data structure\n");
+		exit(1);
+	}
 
 	while ((c = getopt(argc, argv, "d:fFhMPpS:bs")) != EOF) {
 		switch (c) {
@@ -526,9 +536,14 @@ int main (int argc, char ** argv)
 			printf(_("Resizing the filesystem on "
 				 "%s to %llu (%dk) blocks.\n"),
 			       device_name, new_size, blocksize / 1024);
-		retval = resize_fs(fs, &new_size, flags,
-				   ((flags & RESIZE_PERCENT_COMPLETE) ?
-				    resize_progress_func : 0));
+
+		rfs->flags = flags;
+		rfs->new_size = new_size;
+		if (flags & RESIZE_PERCENT_COMPLETE)
+			rfs->progress = resize_progress_func;
+
+		retval = resize_fs(fs, rfs);
+		new_size = rfs->new_size;
 	}
 	free(mtpt);
 	if (retval) {
@@ -562,5 +577,6 @@ int main (int argc, char ** argv)
 	if (fd > 0)
 		close(fd);
 	remove_error_table(&et_ext2_error_table);
+	ext2fs_free_mem(&rfs);
 	return (0);
 }
