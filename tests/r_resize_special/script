@@ -1,0 +1,47 @@
+if test -x $RESIZE2FS_EXE; then
+
+FSCK_OPT=-yf
+OUT=$test_name.log
+EXP=$test_dir/expect
+cp /dev/null $OUT
+
+dd if=/dev/zero of=$TMPFILE bs=1k count=512 > /dev/null 2>&1
+
+echo mke2fs -E first_inode=11 -q -F -o Linux -b 1024 -g 1024 test.img 16384 > $OUT
+$MKE2FS -E first_inode=11 -q -F -o Linux -b 1024 -g 1024 $TMPFILE 16384 2>&1 |
+	sed -f $cmd_dir/filter.sed -e "s;$TMPFILE;test.img;" >> $OUT
+
+echo dumpe2fs test.img >> $OUT
+$DUMPE2FS $TMPFILE 2>&1 | sed -f $cmd_dir/filter.sed -e '/Block bitmap.*$/N;s/\n  Inode bitmap/, Inode bitmap/g' >> $OUT
+
+echo resize2fs -I 21 test.img>> $OUT
+$RESIZE2FS -I 21 $TMPFILE 2>&1 |
+	sed -f $cmd_dir/filter.sed -e "s;$TMPFILE;test.img;" >> $OUT
+
+echo dumpe2fs test.img >> $OUT
+$DUMPE2FS $TMPFILE 2>&1 | sed -f $cmd_dir/filter.sed -e '/Block bitmap.*$/N;s/\n  Inode bitmap/, Inode bitmap/g' >> $OUT
+
+$FSCK $FSCK_OPT -N test_filesys $TMPFILE > $OUT.new 2>&1
+status=$?
+echo Exit status is $status >> $OUT.new
+sed -f $cmd_dir/filter.sed -e "s;$TMPFILE;test.img;" $OUT.new >> $OUT
+rm -f $OUT.new
+
+rm -f $TMPFILE
+cmp -s $OUT $EXP
+status=$?
+
+if [ "$status" = 0 ] ; then
+	echo "$test_name: $test_description: ok"
+	touch $test_name.ok
+else
+	echo "$test_name: $test_description: failed"
+	diff $DIFF_OPTS $EXP $OUT > $test_name.failed
+	rm -f $test_name.tmp
+fi
+
+unset IMAGE FSCK_OPT OUT EXP
+
+else #if test -x $RESIZE2FS; then
+	echo "$test_name: $test_description: skipped"
+fi
